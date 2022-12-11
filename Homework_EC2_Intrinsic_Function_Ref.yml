@@ -1,0 +1,103 @@
+# Mike Ezane is building a basic EC2 instance in a default VPC in  us-west-1 region 
+# Using Mapping and Pseudo parameters to pass values to my template when creating or updating any stack so 
+# that it can become more dynamic.
+# In Parameters, the values are difined by the users and in Pseudo parameters, the values are predifined by the cloud providers
+# Doing so, I have used the parameter sectiion to parameterise my CFT in order to make it reusable.
+
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html 
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html 
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html
+ 
+
+
+Description: >
+  "This is my parametarize EC2 instance deployed in a default VPC in us-west-1 region with Mappings using Pseudo Parameters
+  value for the AZ us-west-1b" to make it dynamic based on the condition.
+
+Parameters: # Adding a new section
+  InstanceTypeParameter: # parameter name
+    Description: An EC2 instance type
+    Type: String
+    Default: "t2.micro"
+    AllowedValues: # List of possible values
+      - t1.micro
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.large
+      - t3.micro
+    Description: Enter t1.micro, t2.nano, t2.micro, t2.small, t3.micro. Default is t2.micro
+  # ImageId:
+  #   Type: String
+  #   Default: "ami-017c001a88dd93847" 
+  #   Description: This is the AMI ID provided by the user    
+  # comment the imageId so that the Pseudo Parameter can predefine it based on the region.
+  AvailabilityZone: 
+    Type: String
+    Default: "us-west-1b"
+    Description: The default AZ set by the user is us-west-1
+  SecurityGroupPort:
+    Type: Number
+    MinValue: 20
+    MaxValue: 65535
+    Default: 22
+    Description: Using SSH port 22
+  SecurityGroupIngressCIDR:
+    Description: Referencing my personal IP address
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: "108.44.252.85/32" # device Ip address
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/.(\d{1,3}) # regex language
+    Description: referencing my IP address for inbound SSH connectivity on port 22.
+  KeyName: # This is a ressource Identifier
+    Description: The Name of a define EC2 keyPair enabling SSH access to the instance.
+    Type: AWS::EC2::KeyPair::KeyName 
+    Default: "cfn-key1"
+    NoEcho: "true"
+  PubSubnet:
+    Description: Using the default subnet value
+    Type: String
+    Default: "subnet-0a39a59dadfbc5f84"
+
+Mappings: # Section dynamically assign fixed value based on a condition.
+  MikeRegionMap: # Region Map
+    us-east-1: # Top key level
+      "HVM64": "ami-0ff8a91507f77f867"
+    us-west-1: 
+      "HVM64": "ami-017c001a88dd93847"  # second level key
+    eu-west-1: 
+      "HVM64": "ami-047bb4163c506cd98"
+    ap-southeast-1: 
+      "HVM64": "ami-08569b978cc4dfa10"
+    ap-northeast-1: 
+      "HVM64": "ami-06cd52961ce9f0d85"
+
+  
+Resources: # The only section of the template that is require
+  HomeworkEC2InstanceForMikeEzane: # Logical Name
+    Type:  AWS::EC2::Instance # Resource Identifier
+    Properties:
+      InstanceType: !Ref InstanceTypeParameter # referencing the parameter.
+      ImageId: !FindInMap [MikeRegionMap, !Ref "AWS::Region", HVM64] # Referencing the Mapping and 
+      # the Pseudo parameter region base on the condition.
+      AvailabilityZone: !Ref AvailabilityZone
+      Tags: 
+        - Key: "Name"
+          Value: "MikeFirstEC2"
+        - Key: "Department"
+          Value: "Finance"  
+      KeyName: !Ref KeyName
+  
+  SGPing:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Ref SecurityGroupIngressCIDR
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref SecurityGroupPort
+          ToPort: !Ref SecurityGroupPort
+          CidrIp: !Ref SecurityGroupIngressCIDR
+      Tags: # Adding Tags
+        - Key: "Name"
+          Value: Mike_SSH_SG

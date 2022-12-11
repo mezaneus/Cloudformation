@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Mike is deploying a new instance in us-west-2.
+  I have leveraged it using cross-stack reference to reference the simple stack previously created in which
+  I have deployed the template in the us-wset-2 region with an Elastic IP address using resources.
+  I have used the Import function to leverage all available variables. I have created parameters to request user inputs
+  as well as using some intrinsic functions such as !GetAttr to display the Private IP address and DNS of the newly created instance.
+  I have used user data to install Apache and display this Quote  "Golden Rule", "Do unto others as you would have them do unto you."
+
+
+Parameters:
+  KeyName:
+    Description: Select the key name from the list
+    Type: "AWS::EC2::KeyPair::KeyName"
+    Default: mkcfn1
+  InstanceType: # parameter name
+    Description: An EC2 instance type
+    Type: String
+    Default: "t2.micro"
+    AllowedValues: # List of possible values
+      - t1.micro
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.large
+      - t3.micro
+    # Descriptions: Enter t1.micro, t2.nano, t2.micro, t2.small, t3.micro. Default is t2.micro
+  NetworkStack:
+    Type: String
+    Description: The subnet ID
+    Default: SampleNetworkCrossStack
+Mappings: # Section dynamically assign fixed value based on a condition.
+  RegionMap: # Region Map
+    us-east-2:
+      "HVM64": "ami-0beaa649c482330f7"
+    us-west-1:
+      "HVM64": "ami-0f5e8a042c8bfcd5e"
+    us-west-2: # Top key level
+      "HVM64": "ami-094125af156557ca2" # second level key
+
+
+Resources: # The only section of the template that is require
+  WebServer: # Logical Name
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", HVM64] #Referencing the Mapping and
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroupIds: # we reference output from the export value of another stack.
+        - Fn::ImportValue:
+            !Sub "${NetworkStack}-SecurityGroupID" 
+      SubnetId:
+        Fn::ImportValue:
+            !Sub "${NetworkStack}-SubnetID" 
+      Tags: # Adding Tags
+        - Key: "Name"
+          Value: "Webserver"
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "Golden Rule", "Do unto others as you would have them do unto you" > /var/www/html/index.html
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref WebServer
+  
+
+
+
+Outputs:
+  PrivateSubnet:
+    Description: Private IPv4 address for the newly created Instance.
+    Value: !GetAtt WebServer.PrivateIp
+
+  DNSName:
+    Description: DNS name of the webserver
+    Value: !GetAtt WebServer.PublicDnsName
