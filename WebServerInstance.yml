@@ -55,3 +55,6 @@ Outputs:
   InstanceId:
     Description: InstanceId of the newly created EC2 instance
     Value: !GetAtt WebServer.PublicIp # return the ip addr
+  AppURL:
+    Description: WordPress App Access URL
+    Value: !Sub 'http://${WebServer.PublicDnsName}:80/index.html' 
