@@ -13,10 +13,12 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      # - mvn install
+      - pwd
+      - echo Mike you can do it if you spend 2 hours per day studying.
   post_build:
     commands:
       - echo Build completed on `date`
+      - ls -l
 artifacts:
   files:
     - '**/*' # zip back evething up
