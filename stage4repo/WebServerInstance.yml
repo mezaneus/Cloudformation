@@ -15,6 +15,13 @@ Parameters:
     Default: 0.0.0.0/0
     AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})" # IP Address
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+  EnvParameter:
+    Type: String
+    # Default: 'test'
+    AllowedValues: 
+      - test
+      - prod
+    # ConstraintDescription: must be test or prod
   ImageId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
@@ -35,7 +42,7 @@ Resources:
           yum install -y httpd
           systemctl start httpd
           systemctl enable httpd
-          echo "<html><body><h1>Hello World in ${AWS::Region}<h1></body></html>" > /var/www/html/index.html
+          echo "<html><body><h1>Hello World from ${EnvParameter} in ${AWS::Region}<h1></body></html>" > /var/www/html/index.html
 
   WebServerSecurityGroup: #security grp ID
     Type: AWS::EC2::SecurityGroup
